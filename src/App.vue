@@ -99,6 +99,10 @@
             <label>Username</label>
             <input v-model="loginForm.username" type="text" placeholder="your_username" class="input" @keyup.enter="doLogin" />
           </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input v-model="loginForm.password" type="password" placeholder="••••••••" class="input" @keyup.enter="doLogin" />
+          </div>
           <div v-if="authError" class="auth-error">{{ authError }}</div>
           <button class="btn-primary btn-full" @click="doLogin" :disabled="loginLoading">
             {{ loginLoading ? 'Signing in...' : 'Sign In →' }}
@@ -121,6 +125,10 @@
           <div class="form-group">
             <label>Username</label>
             <input v-model="registerForm.username" type="text" placeholder="ghost_researcher" class="input" />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input v-model="registerForm.password" type="password" placeholder="••••••••" class="input" />
           </div>
           <div class="form-group">
             <label>Email</label>
@@ -542,13 +550,18 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 // ─── State ──────────────────────────────────────────────
 const view = ref('landing')
-const currentUser = ref(null)
+const saved = localStorage.getItem('gaphack_user')
+const currentUser = ref(saved ? JSON.parse(saved) : null)
+watch(currentUser, (val) => {
+  if (val) localStorage.setItem('gaphack_user', JSON.stringify(val))
+  else localStorage.removeItem('gaphack_user')
+}, { deep: true })
 const profileUser = ref(null)
 const selectedTask = ref(null)
 const authError = ref('')
@@ -571,8 +584,8 @@ const submitLoading = ref(false)
 const postTaskLoading = ref(false)
 const profileLoading = ref(false)
 
-const loginForm = ref({ username: '' })
-const registerForm = ref({ username: '', email: '', role: 'researcher' })
+const loginForm = ref({ username: '', password: '' })
+const registerForm = ref({ username: '', email: '', password: '', role: 'researcher' })
 const taskForm = ref({ title: '', description: '', category: 'Authentication', difficulty: 'Medium', tags: '', points: 500 })
 const badgeForm = ref({ user: '', badge: '' })
 
@@ -737,20 +750,18 @@ async function loadUserProfile(userId) {
 
 // ─── Auth ────────────────────────────────────────────────
 async function doLogin() {
-  const u = loginForm.value.username.trim()
-  if (!u) { authError.value = 'Please enter your username'; return }
+  if (!loginForm.value.username) { authError.value = 'Enter your username'; return }
+  if (!loginForm.value.password) { authError.value = 'Enter your password'; return }
   loginLoading.value = true
   authError.value = ''
   try {
-    const data = await apiFetch(`/users/by-username/${u}`)
-    userSubmissions.value = (data.submissions || []).map(s => ({
-      id: s.id,
-      task: `Task #${s.task_id}`,
-      content: s.content,
-      status: s.status,
-      votes: s.upvotes || 0,
-      time: new Date(s.created_at).toLocaleString(),
-    }))
+    const data = await apiFetch('/login', {
+      method: 'POST',
+      body: JSON.stringify({
+        username: loginForm.value.username,
+        password: loginForm.value.password,
+      }),
+    })
     currentUser.value = {
       id: data.id,
       username: data.username,
@@ -760,9 +771,17 @@ async function doLogin() {
       badges: (data.badges || []).map(b => ({ name: b.badge_type, icon: '🔍', desc: '' })),
       findings: (data.submissions || []).length,
     }
+    userSubmissions.value = (data.submissions || []).map(s => ({
+      id: s.id,
+      task: `Task #${s.task_id}`,
+      content: s.content,
+      status: s.status,
+      votes: s.upvotes || 0,
+      time: new Date(s.created_at).toLocaleString(),
+    }))
     go('dashboard')
   } catch (e) {
-    authError.value = e.message.includes('404') ? 'User not found — try registering first' : `Cannot connect to backend: ${e.message}`
+    authError.value = e.message.includes('401') ? 'Incorrect password' : e.message.includes('404') ? 'User not found' : `Cannot connect to backend: ${e.message}`
   } finally {
     loginLoading.value = false
   }
@@ -776,6 +795,7 @@ async function demoLogin(username) {
 async function doRegister() {
   const f = registerForm.value
   if (!f.username) { authError.value = 'Username is required'; return }
+  if (!f.password) { authError.value = 'Password is required'; return }
   registerLoading.value = true
   authError.value = ''
   try {
@@ -784,6 +804,7 @@ async function doRegister() {
       body: JSON.stringify({
         username: f.username,
         role: f.role === 'company' ? 'company' : 'user',
+        password: f.password,
         reputation: 0,
       }),
     })
@@ -807,6 +828,7 @@ async function doRegister() {
 
 function logout() {
   currentUser.value = null
+  localStorage.removeItem('gaphack_user')
   userSubmissions.value = []
   go('landing')
 }
