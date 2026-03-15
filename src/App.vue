@@ -838,6 +838,7 @@ function go(page) {
   view.value = page
   profileUser.value = null
   authError.value = ''
+  window.location.hash = page
   window.scrollTo(0, 0)
 }
 
@@ -968,6 +969,14 @@ function awardBadge() {
 
 // ─── Init ────────────────────────────────────────────────
 onMounted(() => {
+  const hash = window.location.hash.replace('#', '')
+  if (hash) view.value = hash
+
+  window.addEventListener('popstate', () => {
+    const h = window.location.hash.replace('#', '')
+    if (h) view.value = h
+  })
+
   loadTasks()
   loadLeaderboard()
 })
