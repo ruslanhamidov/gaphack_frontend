@@ -9,10 +9,11 @@
         <button class="logo" @click="go('landing')">
           <span class="logo-bracket">[</span>GAP<span class="logo-accent">HACK</span><span class="logo-bracket">]</span>
         </button>
-        <nav class="nav-links">
+          <nav class="nav-links">
           <button @click="go('tasks')" :class="{ active: view === 'tasks' }">Tasks</button>
           <button @click="go('leaderboard')" :class="{ active: view === 'leaderboard' }">Leaderboard</button>
           <button v-if="currentUser" @click="go('dashboard')" :class="{ active: view === 'dashboard' }">Dashboard</button>
+          <DiscordButton />
         </nav>
         <div class="nav-actions">
           <template v-if="!currentUser">
@@ -46,6 +47,7 @@
           <div class="hero-cta">
             <button class="btn-primary btn-lg" @click="go('register')">Get Started →</button>
             <button class="btn-outline btn-lg" @click="go('tasks')">Browse Tasks</button>
+            <DiscordButton variant="lg" />
           </div>
           <div class="hero-stats">
             <div class="stat"><span class="stat-num">{{ tasks.length || 247 }}</span><span class="stat-label">Active Tasks</span></div>
@@ -551,7 +553,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-
+import DiscordButton from './components/DiscordButton.vue'
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
 // ─── State ──────────────────────────────────────────────
