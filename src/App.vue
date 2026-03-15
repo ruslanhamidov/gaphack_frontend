@@ -107,9 +107,9 @@
           </button>
           <p class="auth-switch">No account? <button @click="go('register')">Register here</button></p>
           <div class="demo-logins">
-            <div class="demo-label">// demo_accounts (from seed data)</div>
-            <button class="demo-btn" @click="demoLogin('security_researcher')">Login as security_researcher</button>
-            <button class="demo-btn" @click="demoLogin('acme_corp')">Login as acme_corp</button>
+            <div class="demo-label">// demo_accounts</div>
+            <button class="demo-btn" @click="demoLogin('ghost_0x1', 'demo123')">🔍 Login as Researcher</button>
+            <button class="demo-btn" @click="demoLogin('acme_corp', 'demo123')">🏢 Login as Company</button>
           </div>
         </div>
       </section>
@@ -803,9 +803,9 @@ async function doLogin() {
   }
 }
 
-async function demoLogin(username) {
+async function demoLogin(username, password) {
   loginForm.value.username = username
-  loginForm.value.password = 'demo'
+  loginForm.value.password = password
   await doLogin()
 }
 
