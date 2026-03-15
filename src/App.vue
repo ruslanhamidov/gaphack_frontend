@@ -21,7 +21,7 @@
             <button class="btn-primary" @click="go('register')">Join</button>
           </template>
           <template v-else>
-            <button class="user-pill" @click="go('profile')">
+            <button class="user-pill" @click="viewUserProfile(currentUser.username)">
               <span class="user-dot"></span>{{ currentUser.username }}
             </button>
             <button class="btn-ghost" @click="logout">Logout</button>
@@ -559,10 +559,18 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 // ─── State ──────────────────────────────────────────────
 const view = ref('landing')
 const saved = localStorage.getItem('gaphack_user')
-const currentUser = ref(saved ? JSON.parse(saved) : null)
+const savedUser = localStorage.getItem('gaphack_user')
+const savedSubmissions = localStorage.getItem('gaphack_submissions')
+const currentUser = ref(savedUser ? JSON.parse(savedUser) : null)
+const userSubmissions = ref(savedSubmissions ? JSON.parse(savedSubmissions) : [])
 watch(currentUser, (val) => {
   if (val) localStorage.setItem('gaphack_user', JSON.stringify(val))
   else localStorage.removeItem('gaphack_user')
+}, { deep: true })
+
+watch(userSubmissions, (val) => {
+  if (val?.length) localStorage.setItem('gaphack_submissions', JSON.stringify(val))
+  else localStorage.removeItem('gaphack_submissions')
 }, { deep: true })
 const profileUser = ref(null)
 const selectedTask = ref(null)
@@ -602,6 +610,15 @@ const availableBadges = [
   { name: 'Zero Day Scout', icon: '🎯', desc: 'Reported a zero-day vulnerability' },
 ]
 
+const badgeIconMap = {
+  'Vulnerability Finder': '🔍',
+  'Security Analyst': '🛡️',
+  'Critical Gap Hunter': '⚡',
+  'Bug Slayer': '🐛',
+  'Zero Day Scout': '🎯',
+  'Security Finding': '🔐',  // default from reward endpoint
+}
+
 const activityFeed = ref([
   { id: 1, time: '2m ago', user: 'security_researcher', action: 'submitted a finding on', target: 'Find XSS vulnerability in login form' },
   { id: 2, time: '34m ago', user: 'cyber_ninja', action: 'submitted on', target: 'Detect SQL injection in API endpoint' },
@@ -622,7 +639,7 @@ const topContributors = ref([])
 const tasks = ref([])
 const leaderboard = ref([])
 const taskSubmissions = ref([])
-const userSubmissions = ref([])
+
 
 // ─── Computed ─────────────────────────────────────────────
 const filteredTasks = computed(() =>
@@ -725,9 +742,10 @@ async function loadUserProfile(userId) {
   profileLoading.value = true
   try {
     const data = await apiFetch(`/users/${userId}`)
+    console.log('badges from API:', data.badges)
     userSubmissions.value = (data.submissions || []).map(s => ({
       id: s.id,
-      task: `Task #${s.task_id}`,
+      task: s.task_title || `Task #${s.task_id}`,
       content: s.content,
       status: s.status,
       votes: s.upvotes || 0,
@@ -739,7 +757,11 @@ async function loadUserProfile(userId) {
       role: data.role,
       reputation: data.reputation,
       bio: data.bio || 'Cybersecurity researcher & vulnerability hunter',
-      badges: (data.badges || []).map(b => ({ name: b.badge_type, icon: '🔍', desc: '' })),
+      badges: (data.badges || []).map(b => ({
+        name: b.badge_type,
+        icon: badgeIconMap[b.badge_type] || '🔍',
+        desc: '',
+      })),
       findings: (data.submissions || []).length,
     }
   } catch (e) {
@@ -770,12 +792,16 @@ async function doLogin() {
       role: data.role,
       reputation: data.reputation,
       bio: data.bio || '',
-      badges: (data.badges || []).map(b => ({ name: b.badge_type, icon: '🔍', desc: '' })),
+      badges: (data.badges || []).map(b => ({
+        name: b.badge_type,
+        icon: badgeIconMap[b.badge_type] || '🔍',
+        desc: '',
+      })),
       findings: (data.submissions || []).length,
     }
     userSubmissions.value = (data.submissions || []).map(s => ({
       id: s.id,
-      task: `Task #${s.task_id}`,
+      task: s.task_title || `Task #${s.task_id}`,
       content: s.content,
       status: s.status,
       votes: s.upvotes || 0,
@@ -831,10 +857,10 @@ async function doRegister() {
 function logout() {
   currentUser.value = null
   localStorage.removeItem('gaphack_user')
+  localStorage.removeItem('gaphack_submissions')
   userSubmissions.value = []
   go('landing')
 }
-
 // ─── Navigation ──────────────────────────────────────────
 function go(page) {
   view.value = page
@@ -939,7 +965,10 @@ async function upvoteSubmission(post) {
 
 async function rewardSubmission(post) {
   try {
-    await apiFetch(`/submissions/${post.id}/reward`, { method: 'POST' })
+    await apiFetch(`/submissions/${post.id}/reward`, {
+      method: 'POST',
+      body: JSON.stringify({ badge_type: 'Security Finding' }),
+    })
     post.status = 'rewarded'
     await loadLeaderboard()
   } catch (e) {
