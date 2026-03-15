@@ -16,7 +16,7 @@
         <div class="nav-actions">
           <template v-if="!currentUser">
             <button class="btn-ghost" @click="go('login')">Sign in</button>
-            <button class="btn-primary" @click="go('register')">Join</button>
+            <button class="btn-primary btn-lg" @click="currentUser ? go('tasks') : go('register')">Get Started →</button>
           </template>
           <template v-else>
             <button class="user-pill" @click="viewUserProfile(currentUser.username)">
@@ -43,7 +43,7 @@
             build real-world portfolios, and crowdsource security gap analysis — without expensive bug bounties.
           </p>
           <div class="hero-cta">
-            <button class="btn-primary btn-lg" @click="go('register')">Get Started →</button>
+            <button class="btn-primary btn-lg" @click="handleGetStarted">Get Started →</button>
             <button class="btn-outline btn-lg" @click="go('tasks')">Browse Tasks</button>
             <DiscordButton variant="lg" />
           </div>
@@ -555,6 +555,14 @@ const savedSubmissions = localStorage.getItem('gaphack_submissions')
 const currentUser = ref(savedUser ? JSON.parse(savedUser) : null)
 const userSubmissions = ref(savedSubmissions ? JSON.parse(savedSubmissions) : [])
 
+function handleGetStarted() {
+  if (currentUser.value) {
+    go('tasks')
+  } else {
+    go('register')
+  }
+}
+
 watch(currentUser, (val) => {
   if (val) localStorage.setItem('gaphack_user', JSON.stringify(val))
   else localStorage.removeItem('gaphack_user')
@@ -805,12 +813,21 @@ async function doRegister() {
   const f = registerForm.value
   if (!f.username) { authError.value = 'Username is required'; return }
   if (!f.password) { authError.value = 'Password is required'; return }
+  if (!f.email || !f.email.includes('@') || !f.email.includes('.')) {
+    authError.value = 'Please enter a valid email address'; return
+  }
   registerLoading.value = true
   authError.value = ''
   try {
     const data = await apiFetch('/users', {
       method: 'POST',
-      body: JSON.stringify({ username: f.username, role: f.role === 'company' ? 'company' : 'user', password: f.password, reputation: 0 }),
+      body: JSON.stringify({
+      username: f.username,
+      role: f.role === 'company' ? 'company' : 'user',
+      password: f.password,
+      email: f.email,      // ← add this
+      reputation: 0,
+    }),
     })
     currentUser.value = { id: data.id, username: data.username, role: data.role, reputation: 0, bio: '', badges: [], findings: 0 }
     userSubmissions.value = []
@@ -1028,7 +1045,7 @@ select.input { cursor: pointer; }
 .hero-title { font-size: clamp(2.4rem, 5vw, 4rem); font-weight: 600; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 1.2rem; }
 .accent { color: var(--accent); }
 .hero-sub { font-size: 1.05rem; color: var(--text2); max-width: 560px; margin-bottom: 2rem; line-height: 1.7; }
-.hero-cta { display: flex; gap: 0.75rem; margin-bottom: 3rem; flex-wrap: wrap; align-items: center; }
+.hero-cta { display: flex; flex-direction: row; gap: 0.75rem; margin-bottom: 3rem; flex-wrap: wrap; align-items: center; justify-content: flex-start; }
 .hero-stats { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
 .stat { display: flex; flex-direction: column; }
 .stat-num { font-family: var(--mono); font-size: 1.5rem; font-weight: 700; color: var(--text); }
