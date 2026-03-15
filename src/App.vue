@@ -1,15 +1,13 @@
 <template>
   <div class="app" :class="{ 'nav-open': mobileNavOpen }">
-    <!-- Scanline overlay -->
     <div class="scanlines" aria-hidden="true"></div>
 
-    <!-- NAV -->
     <header class="nav">
       <div class="nav-inner">
         <button class="logo" @click="go('landing')">
           <span class="logo-bracket">[</span>GAP<span class="logo-accent">HACK</span><span class="logo-bracket">]</span>
         </button>
-          <nav class="nav-links">
+        <nav class="nav-links">
           <button @click="go('tasks')" :class="{ active: view === 'tasks' }">Tasks</button>
           <button @click="go('leaderboard')" :class="{ active: view === 'leaderboard' }">Leaderboard</button>
           <button v-if="currentUser" @click="go('dashboard')" :class="{ active: view === 'dashboard' }">Dashboard</button>
@@ -59,7 +57,6 @@
             <div class="stat"><span class="stat-num">5,310</span><span class="stat-label">Findings</span></div>
           </div>
         </div>
-
         <div class="features">
           <div class="feature-card">
             <div class="feature-icon">⚡</div>
@@ -77,7 +74,6 @@
             <p>Earn reputation points, collect achievement badges, and climb the leaderboard as your contributions are verified and upvoted.</p>
           </div>
         </div>
-
         <div class="live-feed">
           <div class="section-label">// recent_activity</div>
           <div class="feed-list">
@@ -164,13 +160,11 @@
           </div>
           <button v-if="currentUser?.role === 'company'" class="btn-primary" @click="go('post-task')">+ Post Task</button>
         </div>
-
         <div class="filters">
           <button v-for="cat in categories" :key="cat"
             :class="['filter-btn', { active: activeCategory === cat }]"
             @click="activeCategory = cat">{{ cat }}</button>
         </div>
-
         <p v-if="tasksLoading" class="loading-text">// loading tasks from backend...</p>
         <p v-else-if="tasksError" class="error-text">{{ tasksError }}</p>
         <div v-else class="tasks-grid">
@@ -210,11 +204,9 @@
             <span class="tag" v-for="tag in selectedTask.tags" :key="tag">{{ tag }}</span>
           </div>
         </div>
-
         <div class="task-layout">
           <div class="thread-section">
             <div class="section-label">// submissions_thread ({{ taskSubmissions.length }})</div>
-
             <div class="submit-box" v-if="currentUser && currentUser.role !== 'company'">
               <div class="submit-header">
                 <span class="user-dot"></span>
@@ -230,7 +222,6 @@
             <div v-else-if="!currentUser" class="login-prompt">
               <button @click="go('login')">Sign in to submit a finding</button>
             </div>
-
             <p v-if="submissionsLoading" class="loading-text">// loading submissions...</p>
             <div v-else class="thread">
               <div class="thread-post" v-for="post in taskSubmissions" :key="post.id">
@@ -252,7 +243,6 @@
               </div>
             </div>
           </div>
-
           <div class="task-sidebar">
             <div class="sidebar-card">
               <div class="section-label">// task_info</div>
@@ -298,10 +288,7 @@
             <div class="form-group">
               <label>Difficulty</label>
               <select v-model="taskForm.difficulty" class="input">
-                <option>Easy</option>
-                <option>Medium</option>
-                <option>Hard</option>
-                <option>Critical</option>
+                <option>Easy</option><option>Medium</option><option>Hard</option><option>Critical</option>
               </select>
             </div>
           </div>
@@ -332,46 +319,89 @@
               <h2>{{ (profileUser || currentUser)?.username }}</h2>
               <p class="profile-bio">{{ (profileUser || currentUser)?.bio || 'Cybersecurity researcher & vulnerability hunter' }}</p>
               <div class="profile-stats">
-                <div class="pstat"><span class="pstat-num">{{ (profileUser || currentUser)?.reputation || 0 }}</span><span>Reputation</span></div>
-                <div class="pstat"><span class="pstat-num">{{ (profileUser || currentUser)?.findings || 0 }}</span><span>Findings</span></div>
-                <div class="pstat"><span class="pstat-num">{{ (profileUser || currentUser)?.badges?.length || 0 }}</span><span>Badges</span></div>
+                <template v-if="(profileUser || currentUser)?.role !== 'company'">
+                  <div class="pstat"><span class="pstat-num">{{ (profileUser || currentUser)?.reputation || 0 }}</span><span>Reputation</span></div>
+                  <div class="pstat"><span class="pstat-num">{{ (profileUser || currentUser)?.findings || 0 }}</span><span>Findings</span></div>
+                  <div class="pstat"><span class="pstat-num">{{ (profileUser || currentUser)?.badges?.length || 0 }}</span><span>Badges</span></div>
+                </template>
+                <template v-else>
+                  <div class="pstat"><span class="pstat-num">{{ companyTasks.length }}</span><span>Tasks Posted</span></div>
+                  <div class="pstat"><span class="pstat-num">{{ companyTasks.reduce((a, t) => a + t.submissions, 0) }}</span><span>Submissions</span></div>
+                  <div class="pstat"><span class="pstat-num">{{ (profileUser || currentUser)?.reputation || 0 }}</span><span>Reputation</span></div>
+                </template>
               </div>
             </div>
           </div>
 
           <div class="profile-body">
-            <div class="profile-main">
-              <div class="section-label">// recent_submissions</div>
-              <div class="submission-list">
-                <div v-if="!userSubmissions.length" class="loading-text">// no submissions yet</div>
-                <div class="submission-item" v-for="s in userSubmissions" :key="s.id">
-                  <div class="sub-task">{{ s.task }}</div>
-                  <div class="sub-content">{{ s.content }}</div>
-                  <div class="sub-meta">
-                    <span :class="['post-status', s.status]">{{ s.status }}</span>
-                    <span>⬆ {{ s.votes }}</span>
-                    <span>{{ s.time }}</span>
+            <!-- RESEARCHER -->
+            <div class="profile-layout" v-if="(profileUser || currentUser)?.role !== 'company'">
+              <div class="profile-main">
+                <div class="section-label">// recent_submissions</div>
+                <div class="submission-list">
+                  <div v-if="!userSubmissions.length" class="loading-text">// no submissions yet</div>
+                  <div class="submission-item" v-for="s in userSubmissions" :key="s.id">
+                    <div class="sub-task">{{ s.task }}</div>
+                    <div class="sub-content">{{ s.content }}</div>
+                    <div class="sub-meta">
+                      <span :class="['post-status', s.status]">{{ s.status }}</span>
+                      <span>⬆ {{ s.votes }}</span>
+                      <span>{{ s.time }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div class="profile-side">
+                <div class="sidebar-card">
+                  <div class="section-label">// badges</div>
+                  <div v-if="!(profileUser || currentUser)?.badges?.length" class="loading-text" style="margin:0">// no badges yet</div>
+                  <div class="badge-grid">
+                    <div class="badge-item" v-for="badge in (profileUser || currentUser)?.badges || []" :key="badge.name || badge.badge_type" :title="badge.desc">
+                      <span class="badge-icon">{{ badge.icon || '🔍' }}</span>
+                      <span class="badge-name">{{ badge.name || badge.badge_type }}</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="sidebar-card">
+                  <div class="section-label">// skills</div>
+                  <div class="skill-bar" v-for="skill in userSkills" :key="skill.name">
+                    <div class="skill-label"><span>{{ skill.name }}</span><span>{{ skill.level }}%</span></div>
+                    <div class="skill-track"><div class="skill-fill" :style="{ width: skill.level + '%' }"></div></div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div class="profile-side">
-              <div class="sidebar-card">
-                <div class="section-label">// badges</div>
-                <div v-if="!(profileUser || currentUser)?.badges?.length" class="loading-text" style="margin:0">// no badges yet</div>
-                <div class="badge-grid">
-                  <div class="badge-item" v-for="badge in (profileUser || currentUser)?.badges || []" :key="badge.name || badge.badge_type" :title="badge.desc">
-                    <span class="badge-icon">{{ badge.icon || '🔍' }}</span>
-                    <span class="badge-name">{{ badge.name || badge.badge_type }}</span>
+            <!-- COMPANY -->
+            <div class="profile-layout" v-else>
+              <div class="profile-main">
+                <div class="section-label">// posted_tasks</div>
+                <div class="submission-list">
+                  <div v-if="!companyTasks.length" class="loading-text">// no tasks posted yet</div>
+                  <div class="submission-item" v-for="t in companyTasks" :key="t.id" @click="openTask(t)" style="cursor:pointer">
+                    <div class="sub-task">{{ t.category }}</div>
+                    <div class="sub-content">{{ t.title }}</div>
+                    <div class="sub-meta">
+                      <span :class="['difficulty-badge', t.difficulty.toLowerCase()]">{{ t.difficulty }}</span>
+                      <span>💬 {{ t.submissions }} submissions</span>
+                      <span class="accent-text">+{{ t.points }} pts</span>
+                    </div>
                   </div>
                 </div>
               </div>
-              <div class="sidebar-card">
-                <div class="section-label">// skills</div>
-                <div class="skill-bar" v-for="skill in userSkills" :key="skill.name">
-                  <div class="skill-label"><span>{{ skill.name }}</span><span>{{ skill.level }}%</span></div>
-                  <div class="skill-track"><div class="skill-fill" :style="{ width: skill.level + '%' }"></div></div>
+              <div class="profile-side">
+                <div class="sidebar-card">
+                  <div class="section-label">// company_stats</div>
+                  <div class="info-row"><span>Tasks Posted</span><span class="accent-text">{{ companyTasks.length }}</span></div>
+                  <div class="info-row"><span>Total Submissions</span><span>{{ companyTasks.reduce((a, t) => a + t.submissions, 0) }}</span></div>
+                  <div class="info-row"><span>Role</span><span>Company</span></div>
+                  <div class="info-row"><span>Reputation</span><span class="accent-text">{{ (profileUser || currentUser)?.reputation || 0 }}</span></div>
+                </div>
+                <div class="sidebar-card">
+                  <div class="section-label">// about</div>
+                  <p style="font-size:0.82rem; color:var(--text2); line-height:1.6">
+                    {{ (profileUser || currentUser)?.bio || 'Security-focused company posting challenges for the community.' }}
+                  </p>
                 </div>
               </div>
             </div>
@@ -387,7 +417,6 @@
             <h2>Top Researchers</h2>
           </div>
         </div>
-
         <p v-if="leaderboardLoading" class="loading-text">// loading leaderboard...</p>
         <p v-else-if="leaderboardError" class="error-text">{{ leaderboardError }}</p>
         <template v-else-if="leaderboard.length >= 3">
@@ -412,17 +441,11 @@
               <div class="podium-pts">{{ leaderboard[2].reputation }} pts</div>
             </div>
           </div>
-
           <div class="lb-table">
-            <div class="lb-row lb-header">
-              <span>Rank</span><span>Researcher</span><span>Reputation</span><span>Badges</span>
-            </div>
+            <div class="lb-row lb-header"><span>Rank</span><span>Researcher</span><span>Reputation</span><span>Badges</span></div>
             <div class="lb-row" v-for="(user, i) in leaderboard" :key="user.username" @click="viewUserProfile(user.username)">
               <span class="lb-rank" :class="{ 'lb-top': i < 3 }">#{{ i + 1 }}</span>
-              <span class="lb-user">
-                <div class="lb-avatar">{{ user.username[0] }}</div>
-                {{ user.username }}
-              </span>
+              <span class="lb-user"><div class="lb-avatar">{{ user.username[0] }}</div>{{ user.username }}</span>
               <span class="lb-pts">{{ user.reputation }}</span>
               <span class="lb-badges">{{ user.badges }} 🏅</span>
             </div>
@@ -430,15 +453,10 @@
         </template>
         <template v-else-if="leaderboard.length > 0">
           <div class="lb-table">
-            <div class="lb-row lb-header">
-              <span>Rank</span><span>Researcher</span><span>Reputation</span><span>Badges</span>
-            </div>
+            <div class="lb-row lb-header"><span>Rank</span><span>Researcher</span><span>Reputation</span><span>Badges</span></div>
             <div class="lb-row" v-for="(user, i) in leaderboard" :key="user.username" @click="viewUserProfile(user.username)">
               <span class="lb-rank" :class="{ 'lb-top': i < 3 }">#{{ i + 1 }}</span>
-              <span class="lb-user">
-                <div class="lb-avatar">{{ user.username[0] }}</div>
-                {{ user.username }}
-              </span>
+              <span class="lb-user"><div class="lb-avatar">{{ user.username[0] }}</div>{{ user.username }}</span>
               <span class="lb-pts">{{ user.reputation }}</span>
               <span class="lb-badges">{{ user.badges }} 🏅</span>
             </div>
@@ -451,25 +469,12 @@
       <section v-else-if="view === 'dashboard'" class="dashboard">
         <div class="section-label">// {{ currentUser?.role }}_dashboard</div>
         <h2>Welcome back, {{ currentUser?.username }}</h2>
-
         <template v-if="currentUser?.role !== 'company'">
           <div class="dash-grid">
-            <div class="dash-stat-card">
-              <div class="dash-stat-label">Reputation</div>
-              <div class="dash-stat-num accent-text">{{ currentUser.reputation }}</div>
-            </div>
-            <div class="dash-stat-card">
-              <div class="dash-stat-label">Submissions</div>
-              <div class="dash-stat-num">{{ userSubmissions.length }}</div>
-            </div>
-            <div class="dash-stat-card">
-              <div class="dash-stat-label">Badges</div>
-              <div class="dash-stat-num">{{ currentUser.badges?.length || 0 }}</div>
-            </div>
-            <div class="dash-stat-card">
-              <div class="dash-stat-label">Open Tasks</div>
-              <div class="dash-stat-num">{{ tasks.length }}</div>
-            </div>
+            <div class="dash-stat-card"><div class="dash-stat-label">Reputation</div><div class="dash-stat-num accent-text">{{ currentUser.reputation }}</div></div>
+            <div class="dash-stat-card"><div class="dash-stat-label">Submissions</div><div class="dash-stat-num">{{ userSubmissions.length }}</div></div>
+            <div class="dash-stat-card"><div class="dash-stat-label">Badges</div><div class="dash-stat-num">{{ currentUser.badges?.length || 0 }}</div></div>
+            <div class="dash-stat-card"><div class="dash-stat-label">Open Tasks</div><div class="dash-stat-num">{{ tasks.length }}</div></div>
           </div>
           <div class="dash-section">
             <div class="section-label">// recommended_tasks</div>
@@ -485,21 +490,11 @@
             </div>
           </div>
         </template>
-
         <template v-else>
           <div class="dash-grid">
-            <div class="dash-stat-card">
-              <div class="dash-stat-label">Tasks Posted</div>
-              <div class="dash-stat-num accent-text">{{ myTasks.length }}</div>
-            </div>
-            <div class="dash-stat-card">
-              <div class="dash-stat-label">Total Submissions</div>
-              <div class="dash-stat-num">{{ myTasks.reduce((a, t) => a + t.submissions, 0) }}</div>
-            </div>
-            <div class="dash-stat-card">
-              <div class="dash-stat-label">Researchers</div>
-              <div class="dash-stat-num">{{ leaderboard.length }}</div>
-            </div>
+            <div class="dash-stat-card"><div class="dash-stat-label">Tasks Posted</div><div class="dash-stat-num accent-text">{{ myTasks.length }}</div></div>
+            <div class="dash-stat-card"><div class="dash-stat-label">Total Submissions</div><div class="dash-stat-num">{{ myTasks.reduce((a, t) => a + t.submissions, 0) }}</div></div>
+            <div class="dash-stat-card"><div class="dash-stat-label">Researchers</div><div class="dash-stat-num">{{ leaderboard.length }}</div></div>
           </div>
           <div class="dash-section">
             <div class="dash-section-header">
@@ -514,13 +509,10 @@
                   <span class="task-pts">{{ task.submissions }} subs</span>
                 </div>
                 <h3 class="task-title">{{ task.title }}</h3>
-                <div class="task-footer">
-                  <span class="task-stat">+{{ task.points }} pts</span>
-                </div>
+                <div class="task-footer"><span class="task-stat">+{{ task.points }} pts</span></div>
               </div>
             </div>
           </div>
-
           <div class="dash-section">
             <div class="section-label">// award_badge</div>
             <div class="badge-award-form">
@@ -554,15 +546,15 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import DiscordButton from './components/DiscordButton.vue'
+
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'
 
-// ─── State ──────────────────────────────────────────────
-const view = ref('landing')
-const saved = localStorage.getItem('gaphack_user')
+// ─── Persisted state ─────────────────────────────────────
 const savedUser = localStorage.getItem('gaphack_user')
 const savedSubmissions = localStorage.getItem('gaphack_submissions')
 const currentUser = ref(savedUser ? JSON.parse(savedUser) : null)
 const userSubmissions = ref(savedSubmissions ? JSON.parse(savedSubmissions) : [])
+
 watch(currentUser, (val) => {
   if (val) localStorage.setItem('gaphack_user', JSON.stringify(val))
   else localStorage.removeItem('gaphack_user')
@@ -572,6 +564,9 @@ watch(userSubmissions, (val) => {
   if (val?.length) localStorage.setItem('gaphack_submissions', JSON.stringify(val))
   else localStorage.removeItem('gaphack_submissions')
 }, { deep: true })
+
+// ─── State ───────────────────────────────────────────────
+const view = ref('landing')
 const profileUser = ref(null)
 const selectedTask = ref(null)
 const authError = ref('')
@@ -582,7 +577,6 @@ const activeCategory = ref('All')
 const postTaskError = ref('')
 const postTaskSuccess = ref('')
 
-// Loading states
 const loginLoading = ref(false)
 const registerLoading = ref(false)
 const tasksLoading = ref(false)
@@ -616,7 +610,7 @@ const badgeIconMap = {
   'Critical Gap Hunter': '⚡',
   'Bug Slayer': '🐛',
   'Zero Day Scout': '🎯',
-  'Security Finding': '🔐',  // default from reward endpoint
+  'Security Finding': '🔐',
 }
 
 const activityFeed = ref([
@@ -634,12 +628,9 @@ const userSkills = ref([
 ])
 
 const topContributors = ref([])
-
-// ─── Backend data ────────────────────────────────────────
 const tasks = ref([])
 const leaderboard = ref([])
 const taskSubmissions = ref([])
-
 
 // ─── Computed ─────────────────────────────────────────────
 const filteredTasks = computed(() =>
@@ -651,6 +642,11 @@ const filteredTasks = computed(() =>
 const myTasks = computed(() =>
   tasks.value.filter(t => t.company === currentUser.value?.username)
 )
+
+const companyTasks = computed(() => {
+  const username = (profileUser.value || currentUser.value)?.username
+  return tasks.value.filter(t => t.company === username)
+})
 
 // ─── API helper ──────────────────────────────────────────
 async function apiFetch(path, options = {}) {
@@ -722,14 +718,12 @@ async function loadTaskSubmissions(taskId) {
       content: s.content,
       code: null,
     }))
-    // build top contributors
     const contribMap = {}
     taskSubmissions.value.forEach(s => {
       contribMap[s.user] = (contribMap[s.user] || 0) + s.votes
     })
     topContributors.value = Object.entries(contribMap)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 3)
+      .sort((a, b) => b[1] - a[1]).slice(0, 3)
       .map(([name, pts]) => ({ name, pts }))
   } catch (e) {
     console.error('Failed to load submissions', e)
@@ -742,7 +736,6 @@ async function loadUserProfile(userId) {
   profileLoading.value = true
   try {
     const data = await apiFetch(`/users/${userId}`)
-    console.log('badges from API:', data.badges)
     userSubmissions.value = (data.submissions || []).map(s => ({
       id: s.id,
       task: s.task_title || `Task #${s.task_id}`,
@@ -781,31 +774,18 @@ async function doLogin() {
   try {
     const data = await apiFetch('/login', {
       method: 'POST',
-      body: JSON.stringify({
-        username: loginForm.value.username,
-        password: loginForm.value.password,
-      }),
+      body: JSON.stringify({ username: loginForm.value.username, password: loginForm.value.password }),
     })
     currentUser.value = {
-      id: data.id,
-      username: data.username,
-      role: data.role,
-      reputation: data.reputation,
-      bio: data.bio || '',
-      badges: (data.badges || []).map(b => ({
-        name: b.badge_type,
-        icon: badgeIconMap[b.badge_type] || '🔍',
-        desc: '',
-      })),
+      id: data.id, username: data.username, role: data.role,
+      reputation: data.reputation, bio: data.bio || '',
+      badges: (data.badges || []).map(b => ({ name: b.badge_type, icon: badgeIconMap[b.badge_type] || '🔍', desc: '' })),
       findings: (data.submissions || []).length,
     }
     userSubmissions.value = (data.submissions || []).map(s => ({
-      id: s.id,
-      task: s.task_title || `Task #${s.task_id}`,
-      content: s.content,
-      status: s.status,
-      votes: s.upvotes || 0,
-      time: new Date(s.created_at).toLocaleString(),
+      id: s.id, task: s.task_title || `Task #${s.task_id}`,
+      content: s.content, status: s.status,
+      votes: s.upvotes || 0, time: new Date(s.created_at).toLocaleString(),
     }))
     go('dashboard')
   } catch (e) {
@@ -817,6 +797,7 @@ async function doLogin() {
 
 async function demoLogin(username) {
   loginForm.value.username = username
+  loginForm.value.password = 'demo'
   await doLogin()
 }
 
@@ -829,22 +810,9 @@ async function doRegister() {
   try {
     const data = await apiFetch('/users', {
       method: 'POST',
-      body: JSON.stringify({
-        username: f.username,
-        role: f.role === 'company' ? 'company' : 'user',
-        password: f.password,
-        reputation: 0,
-      }),
+      body: JSON.stringify({ username: f.username, role: f.role === 'company' ? 'company' : 'user', password: f.password, reputation: 0 }),
     })
-    currentUser.value = {
-      id: data.id,
-      username: data.username,
-      role: data.role,
-      reputation: 0,
-      bio: '',
-      badges: [],
-      findings: 0,
-    }
+    currentUser.value = { id: data.id, username: data.username, role: data.role, reputation: 0, bio: '', badges: [], findings: 0 }
     userSubmissions.value = []
     go('dashboard')
   } catch (e) {
@@ -861,6 +829,7 @@ function logout() {
   userSubmissions.value = []
   go('landing')
 }
+
 // ─── Navigation ──────────────────────────────────────────
 function go(page) {
   view.value = page
@@ -874,6 +843,7 @@ function go(page) {
 async function openTask(task) {
   selectedTask.value = task
   view.value = 'task-detail'
+  window.location.hash = 'task-detail'
   window.scrollTo(0, 0)
   await loadTaskSubmissions(task.id)
 }
@@ -888,28 +858,14 @@ async function postTask() {
   try {
     const data = await apiFetch('/tasks', {
       method: 'POST',
-      body: JSON.stringify({
-        title: f.title,
-        description: f.description,
-        difficulty: f.difficulty,
-        reward_points: Number(f.points),
-        company_id: currentUser.value.id,
-        category: f.category,
-        tags: f.tags,
-      }),
+      body: JSON.stringify({ title: f.title, description: f.description, difficulty: f.difficulty, reward_points: Number(f.points), company_id: currentUser.value.id, category: f.category, tags: f.tags }),
     })
     tasks.value.unshift({
-      id: data.id,
-      title: data.title,
-      description: data.description,
-      category: data.category || f.category,
-      difficulty: data.difficulty,
+      id: data.id, title: data.title, description: data.description,
+      category: data.category || f.category, difficulty: data.difficulty,
       tags: f.tags.split(',').map(t => t.trim()).filter(Boolean),
-      company: currentUser.value.username,
-      company_id: currentUser.value.id,
-      points: data.reward_points,
-      submissions: 0,
-      upvotes: 0,
+      company: currentUser.value.username, company_id: currentUser.value.id,
+      points: data.reward_points, submissions: 0, upvotes: 0,
     })
     postTaskSuccess.value = '// task published successfully!'
     taskForm.value = { title: '', description: '', category: 'Authentication', difficulty: 'Medium', tags: '', points: 500 }
@@ -928,22 +884,9 @@ async function submitFinding() {
   try {
     const data = await apiFetch(`/tasks/${selectedTask.value.id}/submissions`, {
       method: 'POST',
-      body: JSON.stringify({
-        task_id: selectedTask.value.id,
-        user_id: currentUser.value.id,
-        content: newSubmission.value,
-        status: 'pending',
-      }),
+      body: JSON.stringify({ task_id: selectedTask.value.id, user_id: currentUser.value.id, content: newSubmission.value, status: 'pending' }),
     })
-    taskSubmissions.value.unshift({
-      id: data.id,
-      user: currentUser.value.username,
-      time: 'just now',
-      votes: 0,
-      status: null,
-      content: newSubmission.value,
-      code: null,
-    })
+    taskSubmissions.value.unshift({ id: data.id, user: currentUser.value.username, time: 'just now', votes: 0, status: null, content: newSubmission.value, code: null })
     selectedTask.value.submissions++
     if (currentUser.value) currentUser.value.findings = (currentUser.value.findings || 0) + 1
     newSubmission.value = ''
@@ -959,16 +902,13 @@ async function upvoteSubmission(post) {
     const data = await apiFetch(`/submissions/${post.id}/upvote`, { method: 'POST' })
     post.votes = data.upvotes
   } catch {
-    post.votes++ // optimistic fallback
+    post.votes++
   }
 }
 
 async function rewardSubmission(post) {
   try {
-    await apiFetch(`/submissions/${post.id}/reward`, {
-      method: 'POST',
-      body: JSON.stringify({ badge_type: 'Security Finding' }),
-    })
+    await apiFetch(`/submissions/${post.id}/reward`, { method: 'POST', body: JSON.stringify({ badge_type: 'Security Finding' }) })
     post.status = 'rewarded'
     await loadLeaderboard()
   } catch (e) {
@@ -982,19 +922,29 @@ async function viewUserProfile(username) {
     const data = await apiFetch(`/users/by-username/${username}`)
     profileUser.value = await loadUserProfile(data.id)
   } catch {
-    profileUser.value = { username, reputation: 0, findings: 0, badges: [] }
+    profileUser.value = { username, reputation: 0, findings: 0, badges: [], role: 'user' }
   }
   go('profile')
 }
 
 // ─── Badge award ─────────────────────────────────────────
-function awardBadge() {
-  if (!badgeForm.value.user || !badgeForm.value.badge) return
-  const badge = availableBadges.find(b => b.name === badgeForm.value.badge)
-  if (badge) {
-    badgeSuccess.value = `Badge "${badge.icon} ${badge.name}" awarded to ${badgeForm.value.user}!`
-    badgeForm.value = { user: '', badge: '' }
+async function awardBadge() {
+  if (!badgeForm.value.user || !badgeForm.value.badge) {
+    badgeSuccess.value = 'Please select both a researcher and a badge'
+    return
+  }
+  try {
+    const userData = await apiFetch(`/users/by-username/${badgeForm.value.user}`)
+    await apiFetch(`/users/${userData.id}/badges`, {
+      method: 'POST',
+      body: JSON.stringify({ badge_type: badgeForm.value.badge }),
+    })
+    badgeSuccess.value = `✓ "${badgeForm.value.badge}" awarded to ${badgeForm.value.user}!`
+    badgeForm.value.badge = ''
+    await loadLeaderboard()
     setTimeout(() => badgeSuccess.value = '', 3000)
+  } catch (e) {
+    badgeSuccess.value = `Error: ${e.message}`
   }
 }
 
@@ -1019,21 +969,13 @@ onMounted(() => {
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #f8f7f4;
-  --bg2: #f0efe9;
-  --surface: #ffffff;
-  --border: #e2e0d8;
-  --border2: #d0cec4;
-  --text: #1a1916;
-  --text2: #5a584f;
-  --text3: #8a887e;
-  --accent: #1a6b3c;
-  --accent2: #22c55e;
-  --accent-bg: #f0fdf4;
-  --accent-border: #bbf7d0;
+  --bg: #f8f7f4; --bg2: #f0efe9; --surface: #ffffff;
+  --border: #e2e0d8; --border2: #d0cec4;
+  --text: #1a1916; --text2: #5a584f; --text3: #8a887e;
+  --accent: #1a6b3c; --accent2: #22c55e;
+  --accent-bg: #f0fdf4; --accent-border: #bbf7d0;
   --red: #dc2626;
-  --mono: 'Space Mono', monospace;
-  --sans: 'DM Sans', sans-serif;
+  --mono: 'Space Mono', monospace; --sans: 'DM Sans', sans-serif;
   --radius: 8px;
   --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
   --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
@@ -1041,56 +983,44 @@ onMounted(() => {
 
 html { font-size: 15px; }
 body { background: var(--bg); color: var(--text); font-family: var(--sans); line-height: 1.6; }
-
 .loading-text { font-family: var(--mono); font-size: 0.75rem; color: var(--text3); padding: 2rem 0; }
 .error-text { font-family: var(--mono); font-size: 0.75rem; color: var(--red); padding: 2rem 0; }
-
 .scanlines { position: fixed; inset: 0; pointer-events: none; z-index: 9999; background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.015) 2px, rgba(0,0,0,0.015) 4px); }
 
 .nav { position: sticky; top: 0; z-index: 100; background: rgba(248,247,244,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid var(--border); padding: 0 1.5rem; }
 .nav-inner { max-width: 1200px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; height: 56px; gap: 2rem; }
-.logo { font-family: var(--mono); font-size: 1rem; font-weight: 700; letter-spacing: -0.02em; color: var(--text); background: none; border: none; cursor: pointer; }
-.logo-bracket { color: var(--text3); }
-.logo-accent { color: var(--accent); }
-.logo-small { font-family: var(--mono); font-size: 0.75rem; color: var(--text3); }
-.nav-links { display: flex; gap: 0.25rem; }
+.logo { font-family: var(--mono); font-size: 1rem; font-weight: 700; color: var(--text); background: none; border: none; cursor: pointer; }
+.logo-bracket { color: var(--text3); } .logo-accent { color: var(--accent); } .logo-small { font-family: var(--mono); font-size: 0.75rem; color: var(--text3); }
+.nav-links { display: flex; gap: 0.25rem; align-items: center; }
 .nav-links button { background: none; border: none; padding: 0.4rem 0.75rem; font-family: var(--mono); font-size: 0.75rem; color: var(--text2); cursor: pointer; border-radius: var(--radius); transition: all 0.15s; }
 .nav-links button:hover, .nav-links button.active { color: var(--accent); background: var(--accent-bg); }
 .nav-actions { display: flex; gap: 0.5rem; align-items: center; }
 
-.btn-primary { background: var(--accent); color: #fff; border: none; padding: 0.5rem 1.1rem; border-radius: var(--radius); font-family: var(--mono); font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.15s; letter-spacing: 0.02em; }
+.btn-primary { background: var(--accent); color: #fff; border: none; padding: 0.5rem 1.1rem; border-radius: var(--radius); font-family: var(--mono); font-size: 0.75rem; font-weight: 700; cursor: pointer; transition: all 0.15s; }
 .btn-primary:hover:not(:disabled) { background: #15532e; transform: translateY(-1px); }
 .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
 .btn-primary.btn-lg { padding: 0.7rem 1.5rem; font-size: 0.8rem; }
 .btn-primary.btn-full { width: 100%; padding: 0.75rem; margin-top: 0.5rem; }
 .btn-ghost { background: none; border: 1px solid var(--border); padding: 0.4rem 0.9rem; border-radius: var(--radius); font-family: var(--mono); font-size: 0.75rem; color: var(--text2); cursor: pointer; transition: all 0.15s; }
 .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
-.btn-ghost.btn-sm { padding: 0.25rem 0.6rem; font-size: 0.7rem; }
 .btn-outline { background: none; border: 1.5px solid var(--border2); padding: 0.7rem 1.5rem; border-radius: var(--radius); font-family: var(--mono); font-size: 0.8rem; color: var(--text); cursor: pointer; transition: all 0.15s; }
 .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
 .user-pill { display: flex; align-items: center; gap: 0.5rem; background: var(--accent-bg); border: 1px solid var(--accent-border); padding: 0.35rem 0.75rem; border-radius: 100px; font-family: var(--mono); font-size: 0.72rem; color: var(--accent); cursor: pointer; }
 .user-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent2); display: inline-block; }
 
 .main { max-width: 1200px; margin: 0 auto; padding: 2.5rem 1.5rem 4rem; min-height: calc(100vh - 56px - 56px); }
-
 .input { width: 100%; background: var(--surface); border: 1.5px solid var(--border); border-radius: var(--radius); padding: 0.6rem 0.85rem; font-family: var(--sans); font-size: 0.9rem; color: var(--text); transition: border-color 0.15s; outline: none; }
 .input:focus { border-color: var(--accent); }
 .input--sm { width: auto; flex: 1; }
 .textarea { resize: vertical; min-height: 120px; }
 select.input { cursor: pointer; }
-
 .section-label { font-family: var(--mono); font-size: 0.7rem; color: var(--text3); letter-spacing: 0.05em; margin-bottom: 0.6rem; }
 
 .tag { font-family: var(--mono); font-size: 0.65rem; background: var(--bg2); border: 1px solid var(--border); color: var(--text2); padding: 0.15rem 0.5rem; border-radius: 4px; }
 .difficulty-badge { font-family: var(--mono); font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.55rem; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.05em; }
-.difficulty-badge.easy { background: #dcfce7; color: #15803d; }
-.difficulty-badge.medium { background: #fef9c3; color: #92400e; }
-.difficulty-badge.hard { background: #ffedd5; color: #c2410c; }
-.difficulty-badge.critical { background: #fee2e2; color: #b91c1c; }
-.difficulty-text.easy { color: #15803d; }
-.difficulty-text.medium { color: #92400e; }
-.difficulty-text.hard { color: #c2410c; }
-.difficulty-text.critical { color: #b91c1c; }
+.difficulty-badge.easy { background: #dcfce7; color: #15803d; } .difficulty-badge.medium { background: #fef9c3; color: #92400e; }
+.difficulty-badge.hard { background: #ffedd5; color: #c2410c; } .difficulty-badge.critical { background: #fee2e2; color: #b91c1c; }
+.difficulty-text.easy { color: #15803d; } .difficulty-text.medium { color: #92400e; } .difficulty-text.hard { color: #c2410c; } .difficulty-text.critical { color: #b91c1c; }
 
 .landing { display: flex; flex-direction: column; gap: 5rem; }
 .hero { max-width: 780px; }
@@ -1098,7 +1028,7 @@ select.input { cursor: pointer; }
 .hero-title { font-size: clamp(2.4rem, 5vw, 4rem); font-weight: 600; line-height: 1.1; letter-spacing: -0.03em; margin-bottom: 1.2rem; }
 .accent { color: var(--accent); }
 .hero-sub { font-size: 1.05rem; color: var(--text2); max-width: 560px; margin-bottom: 2rem; line-height: 1.7; }
-.hero-cta { display: flex; gap: 0.75rem; margin-bottom: 3rem; flex-wrap: wrap; }
+.hero-cta { display: flex; gap: 0.75rem; margin-bottom: 3rem; flex-wrap: wrap; align-items: center; }
 .hero-stats { display: flex; align-items: center; gap: 2rem; flex-wrap: wrap; }
 .stat { display: flex; flex-direction: column; }
 .stat-num { font-family: var(--mono); font-size: 1.5rem; font-weight: 700; color: var(--text); }
@@ -1113,10 +1043,7 @@ select.input { cursor: pointer; }
 .feature-card p { font-size: 0.85rem; color: var(--text2); line-height: 1.65; }
 .feed-list { display: flex; flex-direction: column; gap: 0.5rem; }
 .feed-item { font-family: var(--mono); font-size: 0.72rem; display: flex; gap: 0.75rem; align-items: baseline; padding: 0.5rem 0; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-.feed-time { color: var(--text3); min-width: 56px; }
-.feed-user { color: var(--accent); font-weight: 700; }
-.feed-action { color: var(--text2); }
-.feed-target { color: var(--text); }
+.feed-time { color: var(--text3); min-width: 56px; } .feed-user { color: var(--accent); font-weight: 700; } .feed-action { color: var(--text2); } .feed-target { color: var(--text); }
 
 .auth-page { display: flex; justify-content: center; padding: 2rem 0; }
 .auth-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 14px; padding: 2.5rem; width: 100%; max-width: 440px; display: flex; flex-direction: column; gap: 1.1rem; box-shadow: var(--shadow-md); }
@@ -1182,16 +1109,13 @@ select.input { cursor: pointer; }
 .post-user { background: none; border: none; font-family: var(--mono); font-size: 0.75rem; font-weight: 700; color: var(--accent); cursor: pointer; }
 .post-time { font-family: var(--mono); font-size: 0.68rem; color: var(--text3); }
 .post-status { font-family: var(--mono); font-size: 0.65rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 4px; text-transform: uppercase; }
-.post-status.verified { background: #dcfce7; color: #15803d; }
-.post-status.helpful { background: #fef9c3; color: #92400e; }
-.post-status.rewarded { background: #dbeafe; color: #1d4ed8; }
+.post-status.verified { background: #dcfce7; color: #15803d; } .post-status.helpful { background: #fef9c3; color: #92400e; } .post-status.rewarded { background: #dbeafe; color: #1d4ed8; }
 .post-content { font-size: 0.875rem; color: var(--text); line-height: 1.65; margin-bottom: 0.75rem; }
 .post-code { background: #1a1916; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 0.75rem; }
 .post-code pre { font-family: var(--mono); font-size: 0.75rem; color: #86efac; white-space: pre-wrap; }
 .post-actions { display: flex; gap: 0.75rem; align-items: center; }
 .vote-btn, .reply-btn, .verify-btn { background: none; border: 1px solid var(--border); border-radius: 6px; padding: 0.25rem 0.6rem; font-family: var(--mono); font-size: 0.68rem; cursor: pointer; color: var(--text2); transition: all 0.15s; }
-.vote-btn:hover { border-color: var(--accent); color: var(--accent); }
-.verify-btn:hover { border-color: #15803d; color: #15803d; }
+.vote-btn:hover { border-color: var(--accent); color: var(--accent); } .verify-btn:hover { border-color: #15803d; color: #15803d; }
 
 .sidebar-card { background: var(--surface); border: 1.5px solid var(--border); border-radius: 12px; padding: 1.25rem; margin-bottom: 1rem; }
 .info-row { display: flex; justify-content: space-between; align-items: center; padding: 0.4rem 0; border-bottom: 1px solid var(--border); font-size: 0.82rem; }
@@ -1210,8 +1134,9 @@ select.input { cursor: pointer; }
 .pstat { display: flex; flex-direction: column; }
 .pstat-num { font-family: var(--mono); font-size: 1.25rem; font-weight: 700; color: var(--accent); }
 .pstat span:last-child { font-size: 0.72rem; color: var(--text3); }
-.profile-body { display: grid; grid-template-columns: 1fr 280px; gap: 1.75rem; align-items: start; }
-@media (max-width: 768px) { .profile-body { grid-template-columns: 1fr; } }
+.profile-body { display: block; }
+.profile-layout { display: grid; grid-template-columns: 1fr 280px; gap: 1.75rem; align-items: start; }
+@media (max-width: 768px) { .profile-layout { grid-template-columns: 1fr; } }
 .submission-list { display: flex; flex-direction: column; gap: 0.75rem; }
 .submission-item { background: var(--surface); border: 1.5px solid var(--border); border-radius: 10px; padding: 1rem; }
 .sub-task { font-family: var(--mono); font-size: 0.72rem; color: var(--accent); margin-bottom: 0.4rem; }
@@ -1220,8 +1145,7 @@ select.input { cursor: pointer; }
 .badge-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; }
 .badge-item { display: flex; flex-direction: column; align-items: center; gap: 0.25rem; background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 0.6rem 0.4rem; cursor: help; transition: border-color 0.15s; }
 .badge-item:hover { border-color: var(--accent); }
-.badge-icon { font-size: 1.2rem; }
-.badge-name { font-family: var(--mono); font-size: 0.6rem; color: var(--text2); text-align: center; line-height: 1.3; }
+.badge-icon { font-size: 1.2rem; } .badge-name { font-family: var(--mono); font-size: 0.6rem; color: var(--text2); text-align: center; line-height: 1.3; }
 .skill-bar { margin-bottom: 0.75rem; }
 .skill-label { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 0.68rem; color: var(--text2); margin-bottom: 0.3rem; }
 .skill-track { height: 4px; background: var(--border); border-radius: 2px; }
